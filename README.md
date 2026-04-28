@@ -1,3 +1,7 @@
+<!-- studiomeyer-mcp-stack-banner:start -->
+> **Part of the [StudioMeyer MCP Stack](https://studiomeyer.io)** — Built in Mallorca 🌴 · ⭐ if you use it
+<!-- studiomeyer-mcp-stack-banner:end -->
+
 # mcp-hook-conformance
 
 Test-harness CLI that audits any MCP server for Claude Code v2.1.118 `mcp_tool` lifecycle-hook readiness.
