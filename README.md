@@ -43,7 +43,9 @@ Exit codes:
 | `check` | `<config-path> [--output=human\|json\|junit] [--suite=...] [--tool=<name>] [--tries=<n>]` | Run audit; emits report to stdout. |
 | `init` | `[--server-name=<name>] [--force]` | Write example `hook-conformance.config.json` to cwd. |
 | `explain` | `<finding-code>` | Print full explanation and remediation for a finding (e.g. `IDEMP-001`). |
-| `version-info` | — | Print tool version and supported MCP-spec range. |
+| `version-info` | — | Print tool version and supported MCP-spec range. (Alias: `version`.) |
+
+> **This is a CLI, not an MCP server.** Do NOT run `mcp-hook-conformance` via `mcp-inspector` — the package declares `mcp.specVersion` for the targets it audits, not because it speaks MCP itself. Inspector will EACCES on `dist/index.js` (which is the library export) by design.
 
 ## Audit suites
 
