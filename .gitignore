@@ -1,9 +1,23 @@
+# Node
 node_modules/
 dist/
-coverage/
 *.log
-.env
-.env.local
-test-results.xml
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
-*.tgz
+
+# Test coverage
+coverage/
+*.lcov
+
+# Internal factory artifacts (live in github.com/madetocreate/mcp-factory/builds/mcp-hook-conformance)
+BUILDER_NOTES.md
+PLAN.md
+REVIEW.md
+TEST_REPORT.md
+research/
