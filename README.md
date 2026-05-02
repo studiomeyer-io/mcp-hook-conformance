@@ -147,6 +147,10 @@ Snapshot drift triggers a manual review, not a CI fail.
 - **DSGVO suite is keyword heuristic.** It catches missing docs reliably; "looks compliant" is not legal advice.
 - **No auto-fix.** This tool reports findings; you fix them.
 
+## About StudioMeyer
+
+[StudioMeyer](https://studiomeyer.io) is an AI and design studio from Palma de Mallorca, building custom websites and AI infrastructure for small and medium businesses. Production stack on Claude Agent SDK, MCP, n8n and an in-house observability and guard layer.
+
 ## License
 
 [MIT](./LICENSE) &copy; 2026 Matthias Meyer (StudioMeyer)
