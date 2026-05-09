@@ -4,7 +4,14 @@
 
 # mcp-hook-conformance
 
-Test-harness CLI that audits any MCP server for Claude Code v2.1.118 `mcp_tool` lifecycle-hook readiness.
+
+<!-- badges -->
+[![npm version](https://img.shields.io/npm/v/mcp-hook-conformance?style=flat-square&color=cb3837&logo=npm&label=npm)](https://www.npmjs.com/package/mcp-hook-conformance)
+[![npm downloads](https://img.shields.io/npm/dm/mcp-hook-conformance?style=flat-square&color=cb3837&logo=npm&label=installs%2Fmo)](https://www.npmjs.com/package/mcp-hook-conformance)
+![License](https://img.shields.io/github/license/studiomeyer-io/mcp-hook-conformance?style=flat-square&color=22c55e&label=license)
+![Last commit](https://img.shields.io/github/last-commit/studiomeyer-io/mcp-hook-conformance?style=flat-square&color=88c0d0&label=updated)
+![GitHub stars](https://img.shields.io/github/stars/studiomeyer-io/mcp-hook-conformance?style=flat-square&color=ffd700&logo=github&label=stars)
+<!-- /badges -->Test-harness CLI that audits any MCP server for Claude Code v2.1.118 `mcp_tool` lifecycle-hook readiness.
 
 The third foundation pillar:
 - `mcp-protocol-conformance` says: does the server speak the protocol?
