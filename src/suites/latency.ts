@@ -11,13 +11,20 @@ function findProbe(probes: ToolProbe[], toolName: string): ToolProbe | undefined
   return probes.find((p) => p.name === toolName);
 }
 
-function percentile(values: number[], p: number): number {
+/**
+ * Nearest-rank percentile (matching NIST / the common definition used by
+ * latency tooling): rank = ceil(p/100 * N), 1-based, clamped to [1, N].
+ *
+ * The previous `floor((p/100) * N)` was off by one whenever p/100*N landed on
+ * an exact integer (e.g. p50 over 4 samples, or p20 over 5), and for p=100 it
+ * relied on the `min` clamp rather than selecting the max by rank. Picking the
+ * wrong sample shifts the p50/p95 verdict against the configured thresholds.
+ */
+export function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
-  const idx = Math.min(
-    sorted.length - 1,
-    Math.floor((p / 100) * sorted.length)
-  );
+  const rank = Math.ceil((p / 100) * sorted.length);
+  const idx = Math.min(sorted.length - 1, Math.max(0, rank - 1));
   return sorted[idx] ?? 0;
 }
 

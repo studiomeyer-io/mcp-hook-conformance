@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { runIdempotencySuite } from "../../src/suites/idempotency.js";
-import { runLatencySuite } from "../../src/suites/latency.js";
+import { runLatencySuite, percentile } from "../../src/suites/latency.js";
 import { runDeterminismSuite } from "../../src/suites/determinism.js";
 import { runSideEffectsSuite } from "../../src/suites/side-effects.js";
 import { runDsgvoSuite } from "../../src/suites/dsgvo.js";
@@ -118,6 +118,53 @@ describe("latency suite", () => {
     const r = await runLatencySuite(client, tool("broken"), baseConfig);
     expect(r.verdict).toBe("INDETERMINATE");
   });
+
+  it("reports p50/p95 and the per-sample timings in details", async () => {
+    const client = fakeClient({ fast: { delayMs: 1 } });
+    const r = await runLatencySuite(client, tool("fast"), baseConfig);
+    expect(r.details.samples).toBe(5);
+    expect(typeof r.details.p50Ms).toBe("number");
+    expect(typeof r.details.p95Ms).toBe("number");
+    expect(Array.isArray(r.details.timingsMs)).toBe(true);
+    expect((r.details.timingsMs as number[]).length).toBe(5);
+  });
+});
+
+describe("percentile (nearest-rank)", () => {
+  it("returns 0 for an empty sample set", () => {
+    expect(percentile([], 50)).toBe(0);
+    expect(percentile([], 95)).toBe(0);
+  });
+
+  it("computes the median for an odd-length set", () => {
+    expect(percentile([10, 20, 30, 40, 50], 50)).toBe(30);
+  });
+
+  it("uses nearest-rank for an even-length set (no off-by-one)", () => {
+    // rank = ceil(0.5 * 4) = 2 -> index 1 -> value 20
+    expect(percentile([10, 20, 30, 40], 50)).toBe(20);
+  });
+
+  it("selects the correct sample when p/100*N is an exact integer", () => {
+    // p20 over 5 samples: rank = ceil(0.2 * 5) = 1 -> index 0 -> value 10
+    expect(percentile([10, 20, 30, 40, 50], 20)).toBe(10);
+    // p40 over 5 samples: rank = ceil(0.4 * 5) = 2 -> index 1 -> value 20
+    expect(percentile([10, 20, 30, 40, 50], 40)).toBe(20);
+  });
+
+  it("returns the maximum for p95 and p100", () => {
+    expect(percentile([10, 20, 30, 40, 50], 95)).toBe(50);
+    expect(percentile([10, 20, 30, 40, 50], 100)).toBe(50);
+  });
+
+  it("sorts unordered input before selecting", () => {
+    expect(percentile([50, 10, 40, 20, 30], 50)).toBe(30);
+  });
+
+  it("handles a single-element set", () => {
+    expect(percentile([42], 50)).toBe(42);
+    expect(percentile([42], 95)).toBe(42);
+  });
 });
 
 describe("determinism suite", () => {
@@ -145,6 +192,73 @@ describe("determinism suite", () => {
     const r = await runDeterminismSuite(client, tool("x"), baseConfig);
     expect(r.verdict).toBe("WARN");
     expect(r.findings).toContain("DET-002");
+  });
+
+  // Regression: identical float VALUES emitted in a different object key order
+  // must not be reported as float drift. JSON object key ordering is not
+  // guaranteed (DB rows, serializers), so this was a false-positive FAIL.
+  it("PASS when float values are identical but object key order differs", async () => {
+    const client = fakeClient({
+      x: { responses: [{ a: 1.5, b: 2.5 }, { b: 2.5, a: 1.5 }, { a: 1.5, b: 2.5 }] }
+    });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("PASS");
+    expect(r.findings).toEqual([]);
+  });
+
+  it("PASS when nested float values match across reordered keys", async () => {
+    const client = fakeClient({
+      x: {
+        responses: [
+          { outer: { lat: 39.5, lng: 2.6 } },
+          { outer: { lng: 2.6, lat: 39.5 } }
+        ]
+      }
+    });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("PASS");
+  });
+
+  it("FAIL DET-001 when the same float moves to a different key (positional drift)", async () => {
+    const client = fakeClient({
+      x: { responses: [{ a: 1.5, b: 2 }, { a: 2, b: 1.5 }] }
+    });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("FAIL");
+    expect(r.findings).toContain("DET-001");
+  });
+
+  it("FAIL DET-001 when array element order changes (order is significant)", async () => {
+    const client = fakeClient({
+      x: { responses: [{ scores: [0.1, 0.2] }, { scores: [0.2, 0.1] }] }
+    });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("FAIL");
+    expect(r.findings).toContain("DET-001");
+  });
+
+  it("PASS when array of floats is stable", async () => {
+    const client = fakeClient({
+      x: { responses: [{ scores: [0.1, 0.2] }, { scores: [0.1, 0.2] }] }
+    });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("PASS");
+  });
+
+  it("FAIL DET-001 when one call emits an extra float", async () => {
+    const client = fakeClient({
+      x: { responses: [{ p: 0.1 }, { p: 0.1, q: 0.9 }] }
+    });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("FAIL");
+    expect(r.findings).toContain("DET-001");
+  });
+
+  it("INDETERMINATE when a call throws mid-run", async () => {
+    const client = fakeClient({ x: { throws: true } });
+    const r = await runDeterminismSuite(client, tool("x"), baseConfig);
+    expect(r.verdict).toBe("INDETERMINATE");
+    expect(r.details.error).toBeDefined();
   });
 });
 
@@ -245,5 +359,62 @@ describe("dsgvo suite", () => {
     );
     expect(r.verdict).toBe("WARN");
     expect(r.findings).toContain("DSGVO-002");
+  });
+
+  // Regression: keywords were matched as raw substrings, so a destructive tool
+  // with NO real data-handling docs slipped through whenever a keyword happened
+  // to be a substring of an unrelated word ("stored" in "restored"). That is a
+  // false negative — the worst kind for a conformance verdict.
+  it("FAIL DSGVO-001 when keyword only appears as a substring of another word", async () => {
+    const r = await runDsgvoSuite(
+      fakeAny,
+      tool("restore", "Restored the backup snapshot.", { destructiveHint: true }),
+      baseConfig
+    );
+    expect(r.verdict).toBe("FAIL");
+    expect(r.findings).toContain("DSGVO-001");
+  });
+
+  it("FAIL DSGVO-001 for 'understorage' (no word-boundary keyword match)", async () => {
+    const r = await runDsgvoSuite(
+      fakeAny,
+      tool("x", "Handles understorage edge cases.", { destructiveHint: true }),
+      baseConfig
+    );
+    expect(r.verdict).toBe("FAIL");
+    expect(r.findings).toContain("DSGVO-001");
+  });
+
+  it("WARN DSGVO-002 when a non-destructive tool only substring-matches a keyword", async () => {
+    const r = await runDsgvoSuite(
+      fakeAny,
+      tool("x", "Restored the previous view."),
+      baseConfig
+    );
+    expect(r.verdict).toBe("WARN");
+    expect(r.findings).toContain("DSGVO-002");
+  });
+
+  it("PASS when a multi-word phrase keyword is present", async () => {
+    const r = await runDsgvoSuite(
+      fakeAny,
+      tool("x", "Documents data-flow and personal data retention.", {
+        destructiveHint: true
+      }),
+      baseConfig
+    );
+    expect(r.verdict).toBe("PASS");
+    expect(r.findings).toEqual([]);
+  });
+
+  it("PASS when a real keyword appears as a standalone word", async () => {
+    const r = await runDsgvoSuite(
+      fakeAny,
+      tool("x", "Data is stored in memory only; gdpr deletion supported.", {
+        destructiveHint: true
+      }),
+      baseConfig
+    );
+    expect(r.verdict).toBe("PASS");
   });
 });
