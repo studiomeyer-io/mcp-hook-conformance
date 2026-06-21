@@ -76,7 +76,7 @@ Exit codes:
 | `side-effects` | Read-only tools must not mutate server state. Requires `stateProbe` config. | 25 |
 | `latency` | p50 < 30s, p95 < 60s (configurable). 5 samples after 1 warmup call. | 20 |
 | `determinism` | Response shape stable across calls; no float drift. | 15 |
-| `dsgvo` | Tool description mentions data flow / retention / deletion (heuristic). | 10 |
+| `dsgvo` | Tool description mentions data flow / retention / deletion (whole-word heuristic). | 10 |
 
 Suite scoring: `PASS = 100`, `WARN = 60`, `INDETERMINATE = 50`, `FAIL = 0`.
 Tool score = weighted average across configured suites.

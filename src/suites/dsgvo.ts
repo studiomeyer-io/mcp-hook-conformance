@@ -20,9 +20,24 @@ const DATA_KEYWORDS = [
   "anonymized"
 ];
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Match keywords on word boundaries so substrings inside unrelated words don't
+// count: "stored" must not match inside "restored", "delete" not inside
+// "undeletable", "storage" not inside "understorage". A bare substring match
+// caused false NEGATIVES — a destructive tool with no real data-handling docs
+// could pass the suite just because its description happened to contain one of
+// these letter-sequences. `\b` between digits/letters and word chars is fine
+// for these lowercase keywords (including the hyphen/space phrases).
+const DATA_KEYWORD_REGEX = new RegExp(
+  `(?<![a-z0-9])(?:${DATA_KEYWORDS.map(escapeRegExp).join("|")})(?![a-z0-9])`,
+  "i"
+);
+
 function descriptionMentionsDataHandling(description: string): boolean {
-  const lower = description.toLowerCase();
-  return DATA_KEYWORDS.some((kw) => lower.includes(kw));
+  return DATA_KEYWORD_REGEX.test(description);
 }
 
 export async function runDsgvoSuite(

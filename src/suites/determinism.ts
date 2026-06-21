@@ -36,20 +36,33 @@ function extractShape(value: unknown): Shape {
   return { keys: [...keys].sort(), hasFloat };
 }
 
-function extractFloats(value: unknown): number[] {
-  const out: number[] = [];
-  function walk(v: unknown): void {
-    if (typeof v === "number" && !Number.isInteger(v)) {
-      out.push(v);
-    } else if (v && typeof v === "object") {
-      for (const child of Object.values(v as Record<string, unknown>)) {
-        walk(child);
+/**
+ * Collect every non-integer number keyed by its position in the structure.
+ * Keying by path (and sorting by it) makes the comparison independent of
+ * object key-insertion order: two responses with the same float values but
+ * different key ordering must NOT be reported as drift. Array indices stay
+ * positional because element order is semantically significant.
+ */
+function extractFloats(value: unknown): Array<[string, number]> {
+  const out: Array<[string, number]> = [];
+  function walk(v: unknown, path: string): void {
+    if (typeof v === "number") {
+      if (!Number.isInteger(v)) out.push([path, v]);
+      return;
+    }
+    if (Array.isArray(v)) {
+      v.forEach((item, i) => walk(item, `${path}[${i}]`));
+      return;
+    }
+    if (v && typeof v === "object") {
+      for (const key of Object.keys(v as Record<string, unknown>).sort()) {
+        const child = (v as Record<string, unknown>)[key];
+        walk(child, path ? `${path}.${key}` : key);
       }
-    } else if (Array.isArray(v)) {
-      for (const item of v) walk(item);
     }
   }
-  walk(value);
+  walk(value, "");
+  out.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   return out;
 }
 
@@ -101,7 +114,10 @@ export async function runDeterminismSuite(
     floatSets.some(
       (set) =>
         set.length !== firstFloats.length ||
-        set.some((v, i) => v !== firstFloats[i])
+        set.some((entry, i) => {
+          const ref = firstFloats[i];
+          return ref === undefined || entry[0] !== ref[0] || entry[1] !== ref[1];
+        })
     );
 
   const findings: string[] = [];
