@@ -29,8 +29,8 @@ function escapeRegExp(s: string): string {
 // "undeletable", "storage" not inside "understorage". A bare substring match
 // caused false NEGATIVES — a destructive tool with no real data-handling docs
 // could pass the suite just because its description happened to contain one of
-// these letter-sequences. `\b` between digits/letters and word chars is fine
-// for these lowercase keywords (including the hyphen/space phrases).
+// these letter-sequences. The alphanumeric lookarounds keep the hyphen/space
+// phrases ("data flow", "data-flow") intact.
 const DATA_KEYWORD_REGEX = new RegExp(
   `(?<![a-z0-9])(?:${DATA_KEYWORDS.map(escapeRegExp).join("|")})(?![a-z0-9])`,
   "i"

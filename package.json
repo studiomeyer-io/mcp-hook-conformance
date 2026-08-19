@@ -1,6 +1,6 @@
 {
   "name": "mcp-hook-conformance",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Test-harness CLI that audits any MCP server for Claude Code v2.1.118 mcp_tool lifecycle-hook readiness (idempotency, latency, determinism, side-effects, dsgvo).",
   "type": "module",
   "license": "MIT",
@@ -68,5 +68,8 @@
     "specVersion": "2025-06-18",
     "claudeCodeMinVersion": "2.1.118"
   },
-  "mcpName": "io.studiomeyer/hook-conformance"
+  "mcpName": "io.studiomeyer/hook-conformance",
+  "overrides": {
+    "fast-uri": ">=3.1.2"
+  }
 }
