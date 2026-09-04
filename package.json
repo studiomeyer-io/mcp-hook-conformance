@@ -70,6 +70,6 @@
   },
   "mcpName": "io.studiomeyer/hook-conformance",
   "overrides": {
-    "fast-uri": ">=3.1.2"
+    "fast-uri": "^3.1.7"
   }
 }
