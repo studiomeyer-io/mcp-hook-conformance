@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Dependency maintenance
+
+- Refresh locked transitive dependencies within existing manifest ranges. This lockfile maintenance does not publish a new package or change its public API.
+
 ### Security
 
 - **`fast-uri` override corrected to `^3.1.7`.** It stood at `>=3.1.2`, an open
